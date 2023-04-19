@@ -101,7 +101,7 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
     TRACE = 1
 
     def guid_to_id(guid) -> int:
-        cur.execute("SELECT id FROM moz_bookmarks WHERE guid = %s", (guid,))
+        cur.execute("SELECT id FROM moz_bookmarks WHERE guid = ?", (guid,))
         row, = cur
         id, = row
         assert isinstance(id, int)
@@ -109,9 +109,11 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
 
     def origin_id_and_host(uri) -> tuple[int, str]:
         scheme, sep, rest = uri.partition("://")
-        host = rest.split("/")[0]
-        assert sep
+        if not sep:
+            scheme, sep, rest = uri.partition(":")
+        assert sep, uri
         prefix = scheme + sep
+        host = rest.split("/")[0]
         cur.execute("SELECT id FROM moz_origins WHERE prefix = ? AND host = ?", (prefix, host))
         rows = list(cur)
         if rows:
@@ -125,7 +127,7 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
         return cur.lastrowid, host
 
     def uri_to_fk(uri) -> int:
-        cur.execute("SELECT id FROM moz_places WHERE url_hash = %s", (url_hash.url_hash(uri),))
+        cur.execute("SELECT id FROM moz_places WHERE url_hash = ?", (url_hash.url_hash(uri),))
         rows = list(cur)
         if rows:
             row, = rows
@@ -136,8 +138,8 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
         origin_id, host = origin_id_and_host(uri)
         TRACE and print("INSERT INTO moz_places", uri)
         cur.execute(
-            "INSERT INTO moz_places (url, title, rev_host, guid, origin_id) VALUES (?, ?, ?, ?, ?)",
-            (uri, uri, host[::-1], generate_guid(), origin_id)
+            "INSERT INTO moz_places (url, url_hash, title, rev_host, guid, origin_id) VALUES (?, ?, ?, ?, ?, ?)",
+            (uri, url_hash.url_hash(uri), uri, host[::-1], generate_guid(), origin_id)
         )
         TRACE and print(cur.lastrowid)
         return cur.lastrowid

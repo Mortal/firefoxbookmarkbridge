@@ -103,7 +103,7 @@ def dump_bookmarks(cur):
             assert fk is not None
             assert url is not None
             assert uh is not None
-            assert url_hash.url_hash(url) == uh
+            assert uh == 0 or url_hash.url_hash(url) == uh, (url, uh, url_hash.url_hash(url))
             base["uri"] = url
         children = visit(id, skip=skip)
         if children:
