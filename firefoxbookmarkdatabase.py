@@ -18,9 +18,12 @@ guid_to_root = {
 
 
 def guess_places_path() -> str:
-    return glob.glob(
-        os.path.expanduser("~/.mozilla/firefox/*.default-release/places.sqlite")
-    )[0]
+    return max(
+        glob.glob(
+            os.path.expanduser("~/.mozilla/firefox/*.default*/places.sqlite")
+        ),
+        key=lambda f: os.stat(f).st_mtime,
+    )
 
 
 def dump_bookmarks(cur):
