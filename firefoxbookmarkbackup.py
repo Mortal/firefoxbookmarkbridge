@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Produce the same output as Firefox's Organize bookmarks -> Backup format
 (except without the favicons).
