@@ -163,6 +163,9 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
         if "uri" in row:
             fk = uri_to_fk(row["uri"])
             type = 1
+        elif "separator" in row:
+            fk = None
+            type = 3
         else:
             fk = None
             type = 2

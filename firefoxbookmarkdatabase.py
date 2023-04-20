@@ -96,7 +96,11 @@ def dump_bookmarks(cur):
             "lastModified": last_modified,
             "id": id,
             "typeCode": type,
-            "type": {1: "text/x-moz-place", 2: "text/x-moz-place-container"}[type],
+            "type": {
+                1: "text/x-moz-place",
+                2: "text/x-moz-place-container",
+                3: "text/x-moz-place-separator",
+            }[type],
         }
         if guid.rstrip("_") in guid_to_root:
             base["root"] = guid_to_root[guid.rstrip("_")]
@@ -134,6 +138,8 @@ def json_to_rows(a):
         if "uri" in a:
             row["uri"] = a["uri"]
             assert a["typeCode"] == 1
+        elif a["typeCode"] == 3:
+            row["separator"] = True
         else:
             assert a["typeCode"] == 2
         rows[a["guid"]] = row
@@ -161,11 +167,11 @@ def print_diff(diff, a_path, b_path):
     if only_in_a:
         print("Only in %s:" % a_path)
     for guid, o in only_in_a.items():
-        print("- %s %s" % (o["title"], o["uri"] if "uri" in o else "(folder)"))
+        print("- %s %s" % (o["title"], o["uri"] if "uri" in o else "(separator)" if "separator" in o else "(folder)"))
     if only_in_b:
         print("Only in %s:" % b_path)
     for guid, o in only_in_b.items():
-        print("- %s %s" % (o["title"], o["uri"] if "uri" in o else "(folder)"))
+        print("- %s %s" % (o["title"], o["uri"] if "uri" in o else "(separator)" if "separator" in o else "(folder)"))
     if changed:
         print("Changed:")
     for guid, (old, o) in changed.items():
@@ -182,7 +188,7 @@ def print_diff(diff, a_path, b_path):
                 line.append("%s -> %s" % (old["uri"], o["uri"]))
         else:
             assert "uri" not in old
-            line.append("(folder)")
+            line.append("(separator)" if "separator" in o else "(folder)")
         for k in o:
             if o.get(k) != old.get(k):
                 line.append("[%s: %s -> %s]" % (k, old.get(k), o.get(k)))
