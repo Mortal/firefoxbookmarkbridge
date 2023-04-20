@@ -52,18 +52,24 @@ def main() -> None:
         with open(backup_path, "w") as fp:
             fp.write(json.dumps(db_dump) + "\n")
     db_rows = firefoxbookmarkdatabase.json_to_rows(db_dump)
-    only_in_db, changed, only_in_path = firefoxbookmarkdatabase.diff_dicts(db_rows, path_rows)
+    only_in_db, changed, only_in_path = firefoxbookmarkdatabase.diff_dicts(
+        db_rows, path_rows
+    )
     if not only_in_db and not changed and not only_in_path:
         if not args.silent:
             print("No changes")
         return
     if not args.silent:
-        firefoxbookmarkdatabase.print_diff((only_in_db, changed, only_in_path), places_path, args.path)
+        firefoxbookmarkdatabase.print_diff(
+            (only_in_db, changed, only_in_path), places_path, args.path
+        )
     if not args.no_confirm:
         inp = "a"
         while inp != "":
             try:
-                inp = input("Really import the above changes? Press CTRL-C to abort, or RETURN to proceed.")
+                inp = input(
+                    "Really import the above changes? Press CTRL-C to abort, or RETURN to proceed."
+                )
             except (EOFError, KeyboardInterrupt):
                 print("\nAborting.")
                 return
@@ -102,8 +108,8 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
 
     def guid_to_id(guid) -> int:
         cur.execute("SELECT id FROM moz_bookmarks WHERE guid = ?", (guid,))
-        row, = cur
-        id, = row
+        (row,) = cur
+        (id,) = row
         assert isinstance(id, int)
         return id
 
@@ -114,24 +120,31 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
         assert sep, uri
         prefix = scheme + sep
         host = rest.split("/")[0]
-        cur.execute("SELECT id FROM moz_origins WHERE prefix = ? AND host = ?", (prefix, host))
+        cur.execute(
+            "SELECT id FROM moz_origins WHERE prefix = ? AND host = ?", (prefix, host)
+        )
         rows = list(cur)
         if rows:
-            row, = rows
-            id, = row
+            (row,) = rows
+            (id,) = row
             assert isinstance(id, int)
             return id, host
         TRACE and print("INSERT INTO moz_origins", (uri, prefix, host))
-        cur.execute("INSERT INTO moz_origins (prefix, host, frecency) VALUES (?, ?, 0)", (prefix, host))
+        cur.execute(
+            "INSERT INTO moz_origins (prefix, host, frecency) VALUES (?, ?, 0)",
+            (prefix, host),
+        )
         TRACE and print(cur.lastrowid)
         return cur.lastrowid, host
 
     def uri_to_fk(uri) -> int:
-        cur.execute("SELECT id FROM moz_places WHERE url_hash = ?", (url_hash.url_hash(uri),))
+        cur.execute(
+            "SELECT id FROM moz_places WHERE url_hash = ?", (url_hash.url_hash(uri),)
+        )
         rows = list(cur)
         if rows:
-            row, = rows
-            id, = row
+            (row,) = rows
+            (id,) = row
             assert isinstance(id, int)
             return id
 
@@ -139,7 +152,7 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
         TRACE and print("INSERT INTO moz_places", uri)
         cur.execute(
             "INSERT INTO moz_places (url, url_hash, title, rev_host, guid, origin_id) VALUES (?, ?, ?, ?, ?, ?)",
-            (uri, url_hash.url_hash(uri), uri, host[::-1], generate_guid(), origin_id)
+            (uri, url_hash.url_hash(uri), uri, host[::-1], generate_guid(), origin_id),
         )
         TRACE and print(cur.lastrowid)
         return cur.lastrowid
@@ -165,7 +178,7 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
                 row["dateAdded"],
                 row["lastModified"],
                 guid,
-            )
+            ),
         )
         TRACE and print(cur.lastrowid)
 
@@ -174,18 +187,25 @@ def apply_changes(cur, only_in_db, changed, only_in_path):
             assert "uri" in new
             if old["uri"] != new["uri"]:
                 TRACE and print("UPDATE moz_bookmarks SET fk", guid)
-                cur.execute("UPDATE moz_bookmarks SET fk = ? WHERE guid = ?", (uri_to_fk(new["uri"]), guid))
+                cur.execute(
+                    "UPDATE moz_bookmarks SET fk = ? WHERE guid = ?",
+                    (uri_to_fk(new["uri"]), guid),
+                )
                 TRACE and print(cur.rowcount)
         else:
             assert "uri" not in new
         TRACE and print("UPDATE moz_bookmarks", guid, new["title"])
-        cur.execute("UPDATE moz_bookmarks SET position = ?, title = ?, dateAdded = ?, lastModified = ? WHERE guid = ?", (new["index"], new["title"], new["dateAdded"], new["lastModified"], guid))
+        cur.execute(
+            "UPDATE moz_bookmarks SET position = ?, title = ?, dateAdded = ?, lastModified = ? WHERE guid = ?",
+            (new["index"], new["title"], new["dateAdded"], new["lastModified"], guid),
+        )
         TRACE and print(cur.rowcount)
 
     for guid in topsort(only_in_db)[::-1]:
         TRACE and print("DELETE FROM moz_bookmarks", guid, only_in_db[guid]["title"])
         cur.execute("DELETE FROM moz_bookmarks WHERE guid = ?", (guid,))
         TRACE and print(cur.rowcount)
+
 
 if __name__ == "__main__":
     main()

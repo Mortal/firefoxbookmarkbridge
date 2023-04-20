@@ -19,15 +19,12 @@ guid_to_root = {
 
 def guess_places_path() -> str:
     return max(
-        glob.glob(
-            os.path.expanduser("~/.mozilla/firefox/*.default*/places.sqlite")
-        ),
+        glob.glob(os.path.expanduser("~/.mozilla/firefox/*.default*/places.sqlite")),
         key=lambda f: os.stat(f).st_mtime,
     )
 
 
 def dump_bookmarks(cur):
-
     def visit_root(guid: str):
         assert guid in ROOTS
         cur.execute(
@@ -46,9 +43,9 @@ def dump_bookmarks(cur):
             LEFT JOIN moz_places ON moz_places.id = moz_bookmarks.fk
             WHERE moz_bookmarks.guid = ?
             ORDER BY position""",
-            (guid.ljust(12, "_"),)
+            (guid.ljust(12, "_"),),
         )
-        row, = cur
+        (row,) = cur
         return _visit_row(row, skip=("tags",))
 
     def visit(folder_id: int, skip=()):
@@ -70,7 +67,11 @@ def dump_bookmarks(cur):
             ORDER BY position""",
             (folder_id,),
         )
-        return [_visit_row(row) for row in list(cur) if (not skip or row[7].rstrip("_") not in skip)]
+        return [
+            _visit_row(row)
+            for row in list(cur)
+            if (not skip or row[7].rstrip("_") not in skip)
+        ]
 
     def _visit_row(row, skip=()):
         (
@@ -103,7 +104,11 @@ def dump_bookmarks(cur):
             assert fk is not None
             assert url is not None
             assert uh is not None
-            assert uh == 0 or url_hash.url_hash(url) == uh, (url, uh, url_hash.url_hash(url))
+            assert uh == 0 or url_hash.url_hash(url) == uh, (
+                url,
+                uh,
+                url_hash.url_hash(url),
+            )
             base["uri"] = url
         children = visit(id, skip=skip)
         if children:
@@ -141,16 +146,8 @@ def json_to_rows(a):
 
 
 def diff_dicts(a_rows, b_rows):
-    only_in_a = {
-        guid: row
-        for guid, row in a_rows.items()
-        if guid not in b_rows
-    }
-    only_in_b = {
-        guid: row
-        for guid, row in b_rows.items()
-        if guid not in a_rows
-    }
+    only_in_a = {guid: row for guid, row in a_rows.items() if guid not in b_rows}
+    only_in_b = {guid: row for guid, row in b_rows.items() if guid not in a_rows}
     changed = {
         guid: (a_rows[guid], b_rows[guid])
         for guid in a_rows
